@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, CheckSquare, Plus, X } from 'lucide-react';
+import MoodModal from './MoodModal';
 
 interface Habit {
   id: string;
@@ -21,13 +22,6 @@ const STORAGE_KEYS = {
 
 const MOOD_OPTIONS = ['😀', '😐', '😞'];
 
-const chooseMood = () => {
-  const promptText = `Выберите настроение:\n1 - ${MOOD_OPTIONS[0]}\n2 - ${MOOD_OPTIONS[1]}\n3 - ${MOOD_OPTIONS[2]}`;
-  const choice = window.prompt(promptText);
-  const index = choice ? Number(choice) - 1 : -1;
-  return MOOD_OPTIONS[index];
-};
-
 function HabitTracker() {
   const [habits, setHabits] = useState<Habit[]>(() => {
     const savedHabits = localStorage.getItem(STORAGE_KEYS.HABITS);
@@ -46,6 +40,7 @@ function HabitTracker() {
 
   const [newHabit, setNewHabit] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [moodSelection, setMoodSelection] = useState<{ habitId: string; day: number } | null>(null);
 
   // Save habits to localStorage whenever they change
   useEffect(() => {
@@ -67,37 +62,58 @@ function HabitTracker() {
 
   const toggleHabit = (habitId: string, day: number) => {
     const dateStr = formatDate(day);
+    const existingRecord = records.find(r => r.date === dateStr);
+    const isCompleted = existingRecord?.completedHabits.includes(habitId);
+
+    if (isCompleted) {
+      setRecords(prev =>
+        prev.map(r => {
+          if (r.date !== dateStr) return r;
+          const newCompletedHabits = r.completedHabits.filter(id => id !== habitId);
+          const newMoods = { ...(r.moods || {}) };
+          delete newMoods[habitId];
+          return {
+            ...r,
+            completedHabits: newCompletedHabits,
+            moods: Object.keys(newMoods).length ? newMoods : undefined,
+          };
+        })
+      );
+    } else {
+      setMoodSelection({ habitId, day });
+    }
+  };
+
+  const applyMood = (mood: string) => {
+    if (!moodSelection) return;
+    const { habitId, day } = moodSelection;
+    const dateStr = formatDate(day);
     setRecords(prev => {
       const existingRecord = prev.find(r => r.date === dateStr);
       if (existingRecord) {
-        const isCompleted = existingRecord.completedHabits.includes(habitId);
-        const newCompletedHabits = isCompleted
-          ? existingRecord.completedHabits.filter(id => id !== habitId)
-          : [...existingRecord.completedHabits, habitId];
-        const newMoods = { ...(existingRecord.moods || {}) };
-        if (isCompleted) {
-          delete newMoods[habitId];
-        } else {
-          const mood = chooseMood();
-          if (mood) newMoods[habitId] = mood;
-        }
         return prev.map(r =>
           r.date === dateStr
-            ? { ...r, completedHabits: newCompletedHabits, moods: newMoods }
+            ? {
+                ...r,
+                completedHabits: [...r.completedHabits, habitId],
+                moods: { ...(r.moods || {}), [habitId]: mood },
+              }
             : r
         );
       }
-      const mood = chooseMood();
       return [
         ...prev,
         {
           date: dateStr,
           completedHabits: [habitId],
-          moods: mood ? { [habitId]: mood } : {},
+          moods: { [habitId]: mood },
         },
       ];
     });
+    setMoodSelection(null);
   };
+
+  const cancelMood = () => setMoodSelection(null);
 
   const addHabit = () => {
     if (newHabit.trim()) {
@@ -142,6 +158,7 @@ function HabitTracker() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
@@ -245,6 +262,14 @@ function HabitTracker() {
         </div>
       </div>
     </div>
+    {moodSelection && (
+      <MoodModal
+        options={MOOD_OPTIONS}
+        onSelect={applyMood}
+        onClose={cancelMood}
+      />
+    )}
+    </>
   );
 }
 
