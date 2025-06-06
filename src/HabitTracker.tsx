@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, CheckSquare, Plus, X } from 'lucide-react';
 import MoodModal from './MoodModal';
 
+const MOOD_OPTIONS = ['😀', '😐', '😢', '😡'];
+
 interface Habit {
   id: string;
   name: string;
