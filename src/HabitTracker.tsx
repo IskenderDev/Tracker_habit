@@ -11,6 +11,7 @@ interface DayRecord {
   date: string;
   completedHabits: string[];
   highlight?: string;
+  moods?: Record<string, string>;
 }
 
 // Keys for localStorage
@@ -122,10 +123,17 @@ function HabitTracker() {
   const removeHabit = (habitId: string) => {
     setHabits(prev => prev.filter(h => h.id !== habitId));
     // Clean up records for the removed habit
-    setRecords(prev => prev.map(record => ({
-      ...record,
-      completedHabits: record.completedHabits.filter(id => id !== habitId)
-    })));
+    setRecords(prev =>
+      prev.map(record => {
+        const remainingMoods = { ...(record.moods || {}) };
+        delete remainingMoods[habitId];
+        return {
+          ...record,
+          completedHabits: record.completedHabits.filter(id => id !== habitId),
+          moods: Object.keys(remainingMoods).length ? remainingMoods : undefined,
+        };
+      })
+    );
   };
 
   const updateHighlight = (day: number, highlight: string) => {
