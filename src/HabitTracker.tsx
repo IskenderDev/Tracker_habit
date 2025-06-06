@@ -10,22 +10,12 @@ interface DayRecord {
   date: string;
   completedHabits: string[];
   highlight?: string;
-  moods?: Record<string, string>;
 }
 
 // Keys for localStorage
 const STORAGE_KEYS = {
   HABITS: 'habit-tracker-habits',
   RECORDS: 'habit-tracker-records',
-};
-
-const MOOD_OPTIONS = ['😀', '😐', '😞'];
-
-const chooseMood = () => {
-  const promptText = `Выберите настроение:\n1 - ${MOOD_OPTIONS[0]}\n2 - ${MOOD_OPTIONS[1]}\n3 - ${MOOD_OPTIONS[2]}`;
-  const choice = window.prompt(promptText);
-  const index = choice ? Number(choice) - 1 : -1;
-  return MOOD_OPTIONS[index];
 };
 
 function HabitTracker() {
@@ -70,32 +60,16 @@ function HabitTracker() {
     setRecords(prev => {
       const existingRecord = prev.find(r => r.date === dateStr);
       if (existingRecord) {
-        const isCompleted = existingRecord.completedHabits.includes(habitId);
-        const newCompletedHabits = isCompleted
+        const newCompletedHabits = existingRecord.completedHabits.includes(habitId)
           ? existingRecord.completedHabits.filter(id => id !== habitId)
           : [...existingRecord.completedHabits, habitId];
-        const newMoods = { ...(existingRecord.moods || {}) };
-        if (isCompleted) {
-          delete newMoods[habitId];
-        } else {
-          const mood = chooseMood();
-          if (mood) newMoods[habitId] = mood;
-        }
         return prev.map(r =>
           r.date === dateStr
-            ? { ...r, completedHabits: newCompletedHabits, moods: newMoods }
+            ? { ...r, completedHabits: newCompletedHabits }
             : r
         );
       }
-      const mood = chooseMood();
-      return [
-        ...prev,
-        {
-          date: dateStr,
-          completedHabits: [habitId],
-          moods: mood ? { [habitId]: mood } : {},
-        },
-      ];
+      return [...prev, { date: dateStr, completedHabits: [habitId] }];
     });
   };
 
@@ -109,17 +83,10 @@ function HabitTracker() {
   const removeHabit = (habitId: string) => {
     setHabits(prev => prev.filter(h => h.id !== habitId));
     // Clean up records for the removed habit
-    setRecords(prev => prev.map(record => {
-      const { moods, ...rest } = record;
-      const newMoods = Object.fromEntries(
-        Object.entries(moods || {}).filter(([id]) => id !== habitId)
-      );
-      return {
-        ...rest,
-        completedHabits: record.completedHabits.filter(id => id !== habitId),
-        moods: Object.keys(newMoods).length ? newMoods : undefined,
-      };
-    }));
+    setRecords(prev => prev.map(record => ({
+      ...record,
+      completedHabits: record.completedHabits.filter(id => id !== habitId)
+    })));
   };
 
   const updateHighlight = (day: number, highlight: string) => {
@@ -210,21 +177,16 @@ function HabitTracker() {
                   <td className="px-4 py-2 border-b text-center font-medium">{day}</td>
                   {habits.map(habit => (
                     <td key={habit.id} className="px-4 py-2 border-b text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => toggleHabit(habit.id, day)}
-                          className={`w-6 h-6 rounded ${
-                            getRecord(day)?.completedHabits.includes(habit.id)
-                              ? 'text-green-500 hover:text-green-700'
-                              : 'text-gray-300 hover:text-gray-400'
-                          }`}
-                        >
-                          <CheckSquare className="w-full h-full" />
-                        </button>
-                        {getRecord(day)?.moods?.[habit.id] && (
-                          <span>{getRecord(day)?.moods?.[habit.id]}</span>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => toggleHabit(habit.id, day)}
+                        className={`w-6 h-6 rounded ${
+                          getRecord(day)?.completedHabits.includes(habit.id)
+                            ? 'text-green-500 hover:text-green-700'
+                            : 'text-gray-300 hover:text-gray-400'
+                        }`}
+                      >
+                        <CheckSquare className="w-full h-full" />
+                      </button>
                     </td>
                   ))}
                   <td className="px-4 py-2 border-b">
