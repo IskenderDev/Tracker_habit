@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, CheckSquare, Plus, X } from 'lucide-react';
 import MoodModal from './MoodModal';
 
+const MOOD_OPTIONS = ['😀', '😐', '😢', '😡'];
+
 interface Habit {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ interface DayRecord {
   date: string;
   completedHabits: string[];
   highlight?: string;
+  moods?: Record<string, string>;
 }
 
 // Keys for localStorage
